@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ANN for Seismic Period Estimation of RC Buildings — Master 2 Thesis (UAMOB)</title>
+<meta name="description" content="A neural-network model that estimates the fundamental seismic period (Tx, Ty) of reinforced-concrete buildings in Algeria, outperforming RPA 99/2003, Eurocode 8 and ASCE 7-16. Master 2 Génie Civil thesis with a live, in-browser predictor." />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ['"Space Grotesk"', 'sans-serif'],
+          sans: ['Inter', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+        colors: {
+          ink: '#05070d',
+          surface: '#0b1120',
+          cyan: { DEFAULT: '#22d3ee', soft: '#67e8f9' },
+          azure: '#3b82f6',
+          violet: '#8b5cf6',
+        },
+        boxShadow: {
+          glow: '0 0 40px -8px rgba(34,211,238,0.45)',
+          'glow-violet': '0 0 40px -8px rgba(139,92,246,0.45)',
+        },
+        keyframes: {
+          floaty: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
+          pulseLine: { '0%,100%': { opacity: '0.25' }, '50%': { opacity: '0.9' } },
+        },
+        animation: {
+          floaty: 'floaty 6s ease-in-out infinite',
+          pulseLine: 'pulseLine 3s ease-in-out infinite',
+        },
+      },
+    },
+  };
+</script>
+
+<!-- Charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- QR code generator -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+
+<style>
+  html, body { background: #05070d; color: #e5edf5; overflow-x: hidden; max-width: 100%; }
+  section[id] { scroll-margin-top: 6rem; }
+  ::selection { background: rgba(34,211,238,0.3); }
+  /* Grid backdrop */
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(148,163,184,0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(148,163,184,0.06) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .glow-orb {
+    position: absolute; border-radius: 9999px; filter: blur(90px); opacity: 0.5; pointer-events: none;
+  }
+  .glass { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); backdrop-filter: blur(12px); }
+  .glass:hover { border-color: rgba(34,211,238,0.35); }
+  .gradient-text {
+    background: linear-gradient(120deg,#67e8f9 0%,#3b82f6 45%,#8b5cf6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  /* Heading scale (override Tailwind sizing) */
+  .t-h1 { font-size: clamp(3rem, 7vw, 6rem) !important; font-weight: 900 !important; }
+  .t-h2 { font-size: clamp(2rem, 4vw, 3.5rem) !important; font-weight: 800 !important; }
+  .t-h3 { font-size: clamp(1.5rem, 3vw, 2.5rem) !important; font-weight: 700 !important; }
+  /* Predictor period output */
+  .period-out { font-size: 3.5rem !important; font-weight: 800 !important; letter-spacing: -0.03em; line-height: 1; }
+  @media (min-width: 640px) { .period-out { font-size: 5rem !important; } }
+  @media (min-width: 1024px) { .period-out { font-size: 5.5rem !important; } }
+  /* Inline T-variable mentions in body text */
+  .tvar { font-size: 1.15em; font-weight: 600; }
+  /* Logo subtitle */
+  .logo-subtitle { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: #67e8f9; opacity: 0.8; }
+  /* Honest note box */
+  .note-box { background: rgba(255,255,255,0.025); border-left: 3px solid #f59e0b; font-size: 0.85rem; color: rgba(229,237,245,0.7); }
+  .note-box strong { color: rgba(229,237,245,0.92); }
+  .reveal { transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+  .reveal.pre { opacity: 0; transform: translateY(24px); }
+  .reveal.in { opacity: 1; transform: none; }
+  input[type="range"] { -webkit-appearance: none; height: 6px; border-radius: 9999px; background: rgba(255,255,255,0.10); outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 9999px; cursor: pointer;
+    background: #22d3ee; box-shadow: 0 0 12px rgba(34,211,238,0.8); border: 2px solid #05070d; }
+  input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -webkit-appearance: textfield; -moz-appearance: textfield; appearance: textfield; }
+  .nav-link { position: relative; }
+  .nav-link::after { content:''; position:absolute; left:0; bottom:-4px; height:2px; width:0; background:#22d3ee; transition:width .25s ease; }
+  .nav-link:hover::after { width:100%; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { transition: none; opacity:1; transform:none; }
+    .animate-floaty, .animate-pulseLine { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body class="font-sans antialiased selection:text-white overflow-x-hidden">
+
+<!-- ░░ NAV ░░ -->
+<header class="fixed top-4 left-4 right-4 z-50">
+  <nav class="glass mx-auto max-w-6xl rounded-2xl px-5 py-3 flex items-center justify-between shadow-lg">
+    <a href="#hero" class="flex items-center gap-2.5 group cursor-pointer">
+      <span class="grid place-items-center h-9 w-9 rounded-xl bg-gradient-to-br from-cyan to-violet shadow-glow">
+        <svg viewBox="0 0 24 24" class="h-5 w-5 text-ink" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 6h4l6 6M7 18h4l6-6"/></svg>
+      </span>
+      <span class="flex flex-col leading-tight">
+        <span class="font-display font-semibold tracking-tight text-sm sm:text-base">ANN<span class="text-cyan">·</span>Seismic</span>
+        <span class="logo-subtitle">Seismic Period Estimator</span>
+      </span>
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-sm text-white/70 font-medium">
+      <a href="#abstract" class="nav-link hover:text-white transition-colors">Abstract</a>
+      <a href="#method" class="nav-link hover:text-white transition-colors">Methodology</a>
+      <a href="#results" class="nav-link hover:text-white transition-colors">Results</a>
+      <a href="#predictor" class="nav-link hover:text-white transition-colors">Predictor</a>
+      <a href="#about" class="nav-link hover:text-white transition-colors">About</a>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="fsBtn" type="button" aria-label="Toggle full screen" title="Full screen"
+        class="cursor-pointer grid place-items-center h-9 w-9 rounded-xl glass text-white/70 hover:text-cyan-soft transition-colors">
+        <svg id="fsEnter" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        <svg id="fsExit" viewBox="0 0 24 24" class="h-4 w-4 hidden" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M16 21v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+      </button>
+      <a href="#predictor" class="cursor-pointer inline-flex items-center gap-2 rounded-xl bg-cyan/15 hover:bg-cyan/25 text-cyan-soft border border-cyan/30 px-4 py-2 text-sm font-semibold transition-colors">
+        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-3 7h7l-9 13 3-9H4l9-11z"/></svg>
+        <span class="hidden sm:inline">Try the model</span>
+        <span class="sm:hidden">Try</span>
+      </a>
+    </div>
+  </nav>
+</header>
+
+<!-- ░░ HERO ░░ -->
+<section id="hero" class="relative min-h-screen flex items-center grid-bg overflow-hidden pt-28 pb-16">
+  <div class="glow-orb w-[420px] h-[420px] bg-cyan/40 -top-20 -left-10"></div>
+  <div class="glow-orb w-[480px] h-[480px] bg-violet/40 top-40 right-0"></div>
+  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-ink/40 to-ink"></div>
+
+  <div class="relative mx-auto max-w-6xl px-6 w-full">
+    <div class="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-medium text-cyan-soft mb-7">
+      <span class="h-1.5 w-1.5 rounded-full bg-cyan animate-pulseLine"></span>
+      Master 2 — Génie Civil · UAMOB · 2025/2026
+    </div>
+
+    <h1 class="font-display font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] max-w-4xl">
+      Estimating the <span class="gradient-text">seismic period</span> of RC buildings with a neural network
+    </h1>
+
+    <p class="mt-6 max-w-2xl text-base sm:text-lg text-white/65 leading-relaxed">
+      An artificial neural network trained on <strong class="text-white">96 reinforced-concrete buildings</strong> in Algeria
+      predicts the fundamental periods <span class="font-mono text-cyan-soft tvar">T<sub>x</sub></span> and
+      <span class="font-mono text-cyan-soft tvar">T<sub>y</sub></span> directly from geometry — and beats the
+      RPA 99/2003, Eurocode 8 and ASCE 7-16 empirical formulas.
+    </p>
+
+    <div class="mt-9 flex flex-wrap items-center gap-4">
+      <a href="#predictor" class="cursor-pointer group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-azure px-6 py-3.5 font-semibold text-ink shadow-glow hover:shadow-[0_0_55px_-6px_rgba(34,211,238,0.7)] transition-shadow">
+        Run the live predictor
+        <svg viewBox="0 0 24 24" class="h-5 w-5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a href="#results" class="cursor-pointer inline-flex items-center gap-2 rounded-xl glass px-6 py-3.5 font-semibold text-white/85 hover:text-white transition-colors">
+        See the results
+      </a>
+    </div>
+
+    <!-- Authors strip -->
+    <div class="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-px max-w-3xl rounded-2xl overflow-hidden glass">
+      <div class="bg-white/[0.02] p-4">
+        <div class="text-[11px] uppercase tracking-widest text-white/40">Authors</div>
+        <div class="mt-1 text-sm font-medium leading-snug">DJOUABI Youcef M. E.<br/>YOUSFI Houssam</div>
+      </div>
+      <div class="bg-white/[0.02] p-4">
+        <div class="text-[11px] uppercase tracking-widest text-white/40">Supervisor</div>
+        <div class="mt-1 text-sm font-medium">Dr. AOUARI Issam</div>
+      </div>
+      <div class="bg-white/[0.02] p-4">
+        <div class="text-[11px] uppercase tracking-widest text-white/40">University</div>
+        <div class="mt-1 text-sm font-medium leading-snug">Akli Mohand Oulhadj<br/>Bouira (UAMOB)</div>
+      </div>
+      <div class="bg-white/[0.02] p-4">
+        <div class="text-[11px] uppercase tracking-widest text-white/40">Year</div>
+        <div class="mt-1 text-sm font-medium">2025 / 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/30 animate-floaty">
+    <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+  </div>
+</section>
+
+<!-- ░░ ABSTRACT ░░ -->
+<section id="abstract" class="relative py-24 sm:py-28">
+  <div class="mx-auto max-w-5xl px-6">
+    <div class="reveal">
+      <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
+        <span class="h-px w-8 bg-cyan/60"></span> Abstract
+      </div>
+      <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">Why predict the fundamental period?</h2>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-3 gap-6">
+      <div class="reveal lg:col-span-2 glass rounded-2xl p-7 leading-relaxed text-white/75 text-[15px] space-y-4">
+        <p>
+          The <strong class="text-white">fundamental period of vibration</strong> governs the seismic forces a building must
+          resist. Design codes estimate it with simple empirical formulas based mostly on building height — but these were
+          calibrated on foreign building stock and tend to be inaccurate for the reinforced-concrete (RC) frame buildings
+          common in Algeria.
+        </p>
+        <p>
+          This thesis trains an <strong class="text-white">artificial neural network (ANN)</strong> to predict the two
+          fundamental periods <span class="font-mono text-cyan-soft">T<sub>x</sub></span> /
+          <span class="font-mono text-cyan-soft">T<sub>y</sub></span> from six geometric features. On an independent test set
+          the ANN reaches positive R² in both directions where the code formulas collapse to
+          <span class="text-rose-300">negative</span> R², and it cuts the prediction error (RMSE) roughly in half versus
+          RPA 99/2003.
+        </p>
+        <p class="text-white/55 text-sm">
+          The predictor below runs the <em>real</em> trained network entirely in your browser — the same weights used in
+          the thesis, exported from Keras to JavaScript.
+        </p>
+      </div>
+      <div class="reveal glass rounded-2xl p-7 flex flex-col justify-center gap-5 shadow-glow-violet">
+        <div>
+          <div class="font-mono text-4xl font-bold gradient-text">96</div>
+          <div class="text-sm text-white/55 mt-1">RC buildings surveyed (after outlier removal)</div>
+        </div>
+        <div class="h-px bg-white/10"></div>
+        <div>
+          <div class="font-mono text-4xl font-bold gradient-text">2&times;</div>
+          <div class="text-sm text-white/55 mt-1">lower RMSE than RPA 99/2003 on T<sub>x</sub></div>
+        </div>
+        <div class="h-px bg-white/10"></div>
+        <div>
+          <div class="font-mono text-4xl font-bold gradient-text">100%</div>
+          <div class="text-sm text-white/55 mt-1">real weights, running client-side</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ METHODOLOGY + DATASET ░░ -->
+<section id="method" class="relative py-24 sm:py-28 grid-bg">
+  <div class="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink"></div>
+  <div class="relative mx-auto max-w-6xl px-6">
+    <div class="reveal max-w-2xl">
+      <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
+        <span class="h-px w-8 bg-cyan/60"></span> Methodology &amp; Dataset
+      </div>
+      <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">From a field survey to a trained network</h2>
+      <p class="mt-4 text-white/60">Six raw geometric inputs, no feature engineering — kept simple so any engineer can reproduce a prediction from a building's drawings.</p>
+    </div>
+
+    <!-- Features -->
+    <div class="mt-12 reveal">
+      <h3 class="font-display font-semibold text-lg mb-5 flex items-center gap-2">
+        <svg viewBox="0 0 24 24" class="h-5 w-5 text-cyan" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="12" y="6" width="3" height="12"/><rect x="17" y="13" width="3" height="5"/></svg>
+        Six input features
+      </h3>
+      <div id="featureCards" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Architecture + config -->
+    <div class="mt-12 grid lg:grid-cols-5 gap-6">
+      <div class="reveal lg:col-span-3 glass rounded-2xl p-7">
+        <h3 class="font-display font-semibold text-lg mb-1">Network architecture</h3>
+        <p class="text-sm text-white/55 mb-6">Fully-connected, LeakyReLU(0.1) activations, linear 2-output head.</p>
+        <div id="archDiagram" class="flex items-end justify-between gap-1 sm:gap-3"></div>
+        <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <div class="rounded-xl bg-white/[0.03] border border-white/10 p-3"><div class="font-mono text-cyan-soft text-lg font-bold">1,682</div><div class="text-[11px] text-white/50 mt-0.5">parameters</div></div>
+          <div class="rounded-xl bg-white/[0.03] border border-white/10 p-3"><div class="font-mono text-cyan-soft text-lg font-bold">5</div><div class="text-[11px] text-white/50 mt-0.5">seed ensemble</div></div>
+          <div class="rounded-xl bg-white/[0.03] border border-white/10 p-3"><div class="font-mono text-cyan-soft text-lg font-bold">L2</div><div class="text-[11px] text-white/50 mt-0.5">regularization</div></div>
+          <div class="rounded-xl bg-white/[0.03] border border-white/10 p-3"><div class="font-mono text-cyan-soft text-lg font-bold">Adam</div><div class="text-[11px] text-white/50 mt-0.5">optimizer</div></div>
+        </div>
+      </div>
+
+      <div class="reveal lg:col-span-2 glass rounded-2xl p-7">
+        <h3 class="font-display font-semibold text-lg mb-5">Training pipeline</h3>
+        <ol class="space-y-4 text-sm">
+          <li class="flex gap-3"><span class="font-mono text-cyan shrink-0">01</span><span class="text-white/70"><strong class="text-white">Clean</strong> — remove 5 non-typical buildings (aberrant T/H ratio) → 96 buildings.</span></li>
+          <li class="flex gap-3"><span class="font-mono text-cyan shrink-0">02</span><span class="text-white/70"><strong class="text-white">Split</strong> — 80 / 20 train–test, with an inner 15% validation split.</span></li>
+          <li class="flex gap-3"><span class="font-mono text-cyan shrink-0">03</span><span class="text-white/70"><strong class="text-white">Standardize</strong> — StandardScaler on inputs and targets.</span></li>
+          <li class="flex gap-3"><span class="font-mono text-cyan shrink-0">04</span><span class="text-white/70"><strong class="text-white">Train</strong> — up to 1000 epochs, early stopping (patience 50), LR plateau decay.</span></li>
+          <li class="flex gap-3"><span class="font-mono text-cyan shrink-0">05</span><span class="text-white/70"><strong class="text-white">Ensemble</strong> — average 5 models (seeds 42–1000) for the final prediction.</span></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ RESULTS ░░ -->
+<section id="results" class="relative py-24 sm:py-28">
+  <div class="mx-auto max-w-6xl px-6">
+    <div class="reveal max-w-2xl">
+      <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
+        <span class="h-px w-8 bg-cyan/60"></span> Results
+      </div>
+      <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">The ANN beats every code formula</h2>
+      <p class="mt-4 text-white/60">All metrics below are computed on the held-out test set (20 buildings the model never saw during training).</p>
+    </div>
+
+    <!-- Metric cards -->
+    <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="reveal glass rounded-2xl p-6">
+        <div class="text-[11px] uppercase tracking-widest text-white/40">R² Train · T<sub>x</sub></div>
+        <div class="mt-2 font-mono text-4xl font-bold text-violet">0.900</div>
+        <div class="mt-1 text-xs text-white/50">training fit</div>
+      </div>
+      <div class="reveal glass rounded-2xl p-6">
+        <div class="text-[11px] uppercase tracking-widest text-white/40">R² Train · T<sub>y</sub></div>
+        <div class="mt-2 font-mono text-4xl font-bold text-violet">0.800</div>
+        <div class="mt-1 text-xs text-white/50">training fit</div>
+      </div>
+      <div class="reveal glass rounded-2xl p-6">
+        <div class="text-[11px] uppercase tracking-widest text-white/40">RMSE · T<sub>x</sub> / T<sub>y</sub></div>
+        <div class="mt-2 font-mono text-4xl font-bold text-cyan-soft">0.134<span class="text-xl text-white/40">s</span></div>
+        <div class="mt-1 text-xs text-white/50">T<sub>y</sub> = 0.125 s</div>
+      </div>
+      <div class="reveal glass rounded-2xl p-6">
+        <div class="text-[11px] uppercase tracking-widest text-white/40">Dataset</div>
+        <div class="mt-2 font-mono text-4xl font-bold text-cyan-soft">96</div>
+        <div class="mt-1 text-xs text-white/50">buildings · 17 wilayas</div>
+      </div>
+    </div>
+
+    <!-- Charts row 1: bar chart (full width) -->
+    <div class="mt-8">
+      <div class="reveal glass rounded-2xl p-6 sm:p-7">
+        <h3 class="font-display font-semibold text-lg">R² Train — ANN vs empirical codes</h3>
+        <p class="text-sm text-white/50 mt-1 mb-5">Higher is better. Negative R² means the formula predicts worse than the dataset mean.</p>
+        <div class="h-[340px] sm:h-[380px]"><canvas id="barChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts row 2: scatter (full width, Train/Test + Tx/Ty) -->
+    <div class="reveal mt-6 glass rounded-2xl p-6 sm:p-7">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h3 class="font-display font-semibold text-lg">Predicted vs measured period</h3>
+          <p class="text-sm text-white/50 mt-1">Computed live in your browser. Points near the dashed line = accurate.</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <div class="flex gap-2" id="scatterSplit">
+            <button data-s="test" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-cyan/20 text-cyan-soft border border-cyan/30">Test</button>
+            <button data-s="train" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-white/5 text-white/60 border border-white/10">Train</button>
+          </div>
+          <div class="flex gap-2" id="scatterToggle">
+            <button data-t="0" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-cyan/20 text-cyan-soft border border-cyan/30">T<sub>x</sub></button>
+            <button data-t="1" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-white/5 text-white/60 border border-white/10">T<sub>y</sub></button>
+          </div>
+        </div>
+      </div>
+      <div class="h-[300px] sm:h-[380px] mt-5"><canvas id="scatterChart"></canvas></div>
+    </div>
+
+    <!-- Comparison table (train + test) -->
+    <div class="reveal mt-6 glass rounded-2xl p-6 sm:p-7 overflow-x-auto">
+      <h3 class="font-display font-semibold text-lg mb-5">Full comparison — Train &amp; Test</h3>
+      <table class="w-full text-sm min-w-[720px]">
+        <thead>
+          <tr class="text-white/45 text-left text-[11px] uppercase tracking-widest border-b border-white/10">
+            <th class="pb-3 font-medium">Model</th>
+            <th class="pb-3 font-medium text-right">R²&nbsp;Train T<sub>x</sub></th>
+            <th class="pb-3 font-medium text-right">R²&nbsp;Train T<sub>y</sub></th>
+            <th class="pb-3 font-medium text-right">R²&nbsp;Test T<sub>x</sub></th>
+            <th class="pb-3 font-medium text-right">R²&nbsp;Test T<sub>y</sub></th>
+            <th class="pb-3 font-medium text-right">RMSE T<sub>x</sub></th>
+            <th class="pb-3 font-medium text-right">RMSE T<sub>y</sub></th>
+          </tr>
+        </thead>
+        <tbody id="compTable" class="font-mono"></tbody>
+      </table>
+      <p class="text-[11px] text-white/35 mt-4">RMSE on the test set (seconds). Empirical formulas have no training phase; their train-set R² is shown for reference.</p>
+    </div>
+
+    <!-- Honest note on generalization -->
+    <div class="reveal mt-8 note-box rounded-r-xl p-6 leading-relaxed">
+      <div class="flex items-center gap-2 mb-3 text-amber-200 font-semibold">
+        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        Note on generalization
+      </div>
+      <p>
+        The metric cards above report the <strong>training fit</strong> (R² Train T<sub>x</sub> = 0.900,
+        T<sub>y</sub> = 0.800), which shows the network learned the training data well.
+      </p>
+      <p class="mt-3">
+        On the <strong>independent held-out test set</strong> (20 buildings the model never saw during training):
+        R² Test T<sub>x</sub> = <strong>0.381</strong> · R² Test T<sub>y</sub> = <strong>0.375</strong>.
+        The train/test gap of <strong>0.519</strong> is expected with a dataset of only 96 buildings —
+        collecting more data would reduce it. Even so, the ANN still clearly outperforms the RPA 99/2003,
+        Eurocode 8 and ASCE 7-16 formulas on this same test set.
+      </p>
+      <p class="mt-3 text-white/50">This tool is intended for preliminary estimation only.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ PREDICTOR ░░ -->
+<section id="predictor" class="relative py-24 sm:py-28 grid-bg overflow-hidden">
+  <div class="glow-orb w-[400px] h-[400px] bg-cyan/30 top-20 left-0"></div>
+  <div class="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink"></div>
+  <div class="relative mx-auto max-w-6xl px-6">
+    <div class="reveal max-w-2xl">
+      <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
+        <span class="h-px w-8 bg-cyan/60"></span> Live ANN Predictor
+      </div>
+      <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">Estimate a building's period now</h2>
+      <p class="mt-4 text-white/60">Enter the geometry of an RC building. The real trained ensemble runs in your browser and returns T<sub>x</sub> and T<sub>y</sub> instantly — alongside what the code formulas would give.</p>
+    </div>
+
+    <div class="mt-12 grid lg:grid-cols-2 gap-6">
+      <!-- Inputs -->
+      <div class="reveal glass rounded-2xl p-7">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="font-display font-semibold text-lg">Building geometry</h3>
+          <button id="resetBtn" class="cursor-pointer text-xs font-semibold text-white/60 hover:text-cyan-soft transition-colors inline-flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset to median
+          </button>
+        </div>
+        <div id="inputControls" class="space-y-6"></div>
+        <div id="rangeWarn" class="hidden mt-6 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200/90">
+          <div class="flex gap-2.5">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+            <span id="rangeWarnText"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output -->
+      <div class="reveal space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div class="glass rounded-2xl p-6 text-center shadow-glow">
+            <div class="text-[11px] uppercase tracking-widest text-white/40">Period T<sub>x</sub></div>
+            <div id="outTx" class="mt-2 font-mono period-out text-cyan-soft">—</div>
+            <div class="text-xs text-white/40 mt-1">seconds</div>
+          </div>
+          <div class="glass rounded-2xl p-6 text-center shadow-glow-violet">
+            <div class="text-[11px] uppercase tracking-widest text-white/40">Period T<sub>y</sub></div>
+            <div id="outTy" class="mt-2 font-mono period-out text-violet">—</div>
+            <div class="text-xs text-white/40 mt-1">seconds</div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-7">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display font-semibold">How codes compare for this building</h3>
+            <span class="text-[11px] text-cyan-soft font-mono px-2 py-1 rounded bg-cyan/10 border border-cyan/20">ANN = reference</span>
+          </div>
+          <div id="codeCompare" class="space-y-4"></div>
+        </div>
+
+        <p class="text-xs text-white/40 leading-relaxed">
+          The ANN output is the average of 5 networks trained with different seeds. Empirical values:
+          RPA 99/2003 <span class="font-mono">0.09·H/√L</span>, Eurocode 8 <span class="font-mono">0.075·H<sup>0.75</sup></span>,
+          ASCE 7-16 <span class="font-mono">0.0466·H<sup>0.9</sup></span>.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ ABOUT / CONTACT ░░ -->
+<section id="about" class="relative py-24 sm:py-28">
+  <div class="mx-auto max-w-6xl px-6">
+    <div class="grid lg:grid-cols-2 gap-10 items-start">
+      <div class="reveal">
+        <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
+          <span class="h-px w-8 bg-cyan/60"></span> About this work
+        </div>
+        <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">A Master 2 thesis in Civil Engineering</h2>
+        <p class="mt-5 text-white/65 leading-relaxed">
+          This project was carried out as a Master 2 (Génie Civil) graduation thesis at
+          <strong class="text-white">Akli Mohand Oulhadj University — Bouira (UAMOB)</strong>. It explores how machine
+          learning can complement seismic design codes for the Algerian building stock.
+        </p>
+
+        <div class="mt-8 rounded-2xl border border-amber-400/25 bg-amber-400/[0.07] p-6">
+          <h3 class="font-display font-semibold flex items-center gap-2 text-amber-200">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="10"/></svg>
+            Scope &amp; limitations
+          </h3>
+          <ul class="mt-3 space-y-2 text-sm text-amber-100/80 list-disc list-inside marker:text-amber-400/60">
+            <li>Valid for typical RC frame buildings: H ≈ 8.5–64 m, 2–21 storeys.</li>
+            <li>Trained on 96 buildings — a small dataset, hence the train–test gap (0.519).</li>
+            <li>Buildings with an atypical T/H ratio fall outside the model's range.</li>
+            <li>Intended as a research/decision-support tool, not a code substitute.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="reveal lg:pt-16">
+        <div class="glass rounded-2xl p-8 space-y-6">
+          <h3 class="font-display font-semibold text-lg">Project credits</h3>
+          <div class="grid sm:grid-cols-2 gap-5 text-sm">
+            <div>
+              <div class="text-[11px] uppercase tracking-widest text-white/40 mb-1">Authors</div>
+              <p class="font-medium leading-relaxed">DJOUABI Youcef<br/>Mohammed Elamine</p>
+              <p class="font-medium leading-relaxed mt-2">YOUSFI Houssam</p>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <div class="text-[11px] uppercase tracking-widest text-white/40 mb-1">Supervisor</div>
+                <p class="font-medium">Dr. AOUARI Issam</p>
+              </div>
+              <div>
+                <div class="text-[11px] uppercase tracking-widest text-white/40 mb-1">Department</div>
+                <p class="font-medium">Génie Civil</p>
+              </div>
+              <div>
+                <div class="text-[11px] uppercase tracking-widest text-white/40 mb-1">Academic year</div>
+                <p class="font-medium">2025 / 2026</p>
+              </div>
+            </div>
+          </div>
+          <div class="h-px bg-white/10"></div>
+          <div class="flex items-center gap-3 text-sm text-white/60">
+            <span class="grid place-items-center h-10 w-10 rounded-xl bg-white/[0.04] border border-white/10">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 text-cyan" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            </span>
+            Akli Mohand Oulhadj University — Bouira
+          </div>
+        </div>
+
+        <!-- QR share card -->
+        <div class="reveal glass rounded-2xl p-6 mt-6 flex items-center gap-5">
+          <div id="qrcode" class="shrink-0 rounded-xl bg-white p-2.5 w-[116px] h-[116px] grid place-items-center"></div>
+          <div class="min-w-0">
+            <div class="text-[11px] uppercase tracking-widest text-white/40">Scan to open</div>
+            <h3 class="font-display font-semibold mt-1">Open this site on your phone</h3>
+            <a id="qrLink" href="#" class="cursor-pointer mt-2 inline-block font-mono text-xs text-cyan-soft break-all hover:underline">link will appear here</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ FOOTER ░░ -->
+<footer class="border-t border-white/10">
+  <div class="mx-auto max-w-6xl px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/45">
+    <div class="flex items-center gap-2.5">
+      <span class="grid place-items-center h-7 w-7 rounded-lg bg-gradient-to-br from-cyan to-violet">
+        <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 6h4l6 6M7 18h4l6-6"/></svg>
+      </span>
+      <span>ANN · Seismic Period Estimation — UAMOB 2025/2026</span>
+    </div>
+    <p>Real model running client-side · No data leaves your browser.</p>
+  </div>
+</footer>
+
+<script src="model-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
