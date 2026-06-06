@@ -97,8 +97,8 @@
   function _updateThemeBtn() {
     const sun  = document.getElementById("themeIconSun");
     const moon = document.getElementById("themeIconMoon");
-    if (sun)  sun.classList.toggle("hidden",  _theme === "light");
-    if (moon) moon.classList.toggle("hidden", _theme === "dark");
+    if (sun)  sun.classList.toggle("hidden",  _theme === "dark");
+    if (moon) moon.classList.toggle("hidden", _theme === "light");
   }
 
   function applyTheme(theme) {
