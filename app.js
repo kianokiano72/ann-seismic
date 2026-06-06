@@ -90,7 +90,7 @@
       text:   isLight ? "rgba(15,23,42,0.65)"  : "rgba(229,237,245,0.65)",
       grid:   isLight ? "rgba(15,23,42,0.08)"  : "rgba(255,255,255,0.08)",
       perfect: isLight ? "rgba(15,23,42,0.28)" : "rgba(255,255,255,0.35)",
-      ptBorder: isLight ? "#f1f5f9" : "#05070d",
+      ptBorder: isLight ? "#cbd5e1" : "#05070d",
     };
   }
 
