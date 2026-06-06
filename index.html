@@ -9,7 +9,7 @@
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Space+Grotesk:wght@400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 
 <!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -19,6 +19,7 @@
       extend: {
         fontFamily: {
           display: ['"Space Grotesk"', 'sans-serif'],
+          elegant: ['"Playfair Display"', 'serif'],
           sans: ['Outfit', 'sans-serif'],
           mono: ['"JetBrains Mono"', 'monospace'],
         },
@@ -141,6 +142,12 @@
   html[data-theme="light"] .text-rose-300    { color: #e11d48 !important; }
   html[data-theme="light"] .text-amber-200   { color: #92400e !important; }
 
+  /* Scope & limitations amber box — make it visible in light mode */
+  html[data-theme="light"] [class*="border-amber-"] { border-color: rgba(180,83,9,0.40) !important; }
+  html[data-theme="light"] [class*="bg-amber-"]     { background-color: rgba(217,119,6,0.09) !important; }
+  html[data-theme="light"] [class*="text-amber-"]   { color: #92400e !important; }
+  html[data-theme="light"] #about li::marker        { color: #b45309 !important; }
+
   /* Period output numbers */
   html[data-theme="light"] #outTx { color: #0284c7 !important; }
   html[data-theme="light"] #outTy { color: #7c3aed !important; }
@@ -262,7 +269,7 @@
       Master 2 — Génie Civil · UAMOB · 2025/2026
     </div>
 
-    <h1 class="font-display font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] max-w-4xl">
+    <h1 class="font-elegant font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] max-w-4xl">
       Estimating the <span class="gradient-text">seismic period</span> of RC buildings with a neural network
     </h1>
 
@@ -316,7 +323,7 @@
       <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
         <span class="h-px w-8 bg-cyan/60"></span> Abstract
       </div>
-      <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">Why predict the fundamental period?</h2>
+      <h2 class="mt-4 font-elegant font-bold text-3xl sm:text-4xl tracking-tight">Why predict the fundamental period?</h2>
     </div>
     <div class="mt-8 grid lg:grid-cols-3 gap-6">
       <div class="reveal lg:col-span-2 glass rounded-2xl p-7 leading-relaxed text-white/75 text-[15px] space-y-4">
@@ -367,7 +374,7 @@
       <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
         <span class="h-px w-8 bg-cyan/60"></span> Methodology &amp; Dataset
       </div>
-      <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">From a field survey to a trained network</h2>
+      <h2 class="mt-4 font-elegant font-bold text-3xl sm:text-4xl tracking-tight">From a field survey to a trained network</h2>
       <p class="mt-4 text-white/60">Six raw geometric inputs, no feature engineering — kept simple so any engineer can reproduce a prediction from a building's drawings.</p>
     </div>
 
@@ -415,7 +422,7 @@
       <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
         <span class="h-px w-8 bg-cyan/60"></span> Results
       </div>
-      <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">The ANN beats every code formula</h2>
+      <h2 class="mt-4 font-elegant font-bold text-3xl sm:text-4xl tracking-tight">The ANN beats every code formula</h2>
       <p class="mt-4 text-white/60">All metrics below are computed on the held-out test set (20 buildings the model never saw during training).</p>
     </div>
 
@@ -524,7 +531,7 @@
       <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
         <span class="h-px w-8 bg-cyan/60"></span> Live ANN Predictor
       </div>
-      <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">Estimate a building's period now</h2>
+      <h2 class="mt-4 font-elegant font-bold text-3xl sm:text-4xl tracking-tight">Estimate a building's period now</h2>
       <p class="mt-4 text-white/60">Enter the geometry of an RC building, then click <strong class="text-cyan-soft">Calculate Periods</strong>. The real trained ensemble runs in your browser and returns T<sub>x</sub> and T<sub>y</sub> — alongside what the code formulas would give.</p>
     </div>
 
@@ -600,7 +607,7 @@
         <div class="flex items-center gap-3 text-cyan-soft text-base font-semibold tracking-[0.2em] uppercase">
           <span class="h-px w-8 bg-cyan/60"></span> About this work
         </div>
-        <h2 class="mt-4 font-display font-bold text-3xl sm:text-4xl tracking-tight">A Master 2 thesis in Civil Engineering</h2>
+        <h2 class="mt-4 font-elegant font-bold text-3xl sm:text-4xl tracking-tight">A Master 2 thesis in Civil Engineering</h2>
         <p class="mt-5 text-white/65 leading-relaxed">
           This project was carried out as a Master 2 (Génie Civil) graduation thesis at
           <strong class="text-white">Akli Mohand Oulhadj University — Bouira (UAMOB)</strong>. It explores how machine
