@@ -386,7 +386,7 @@
   // ========================================================================
   // After deploying, set DEPLOYED_URL to your public address (e.g. GitHub Pages).
   // When the page is already served over http(s), the current URL is used automatically.
-  const DEPLOYED_URL = "https://USERNAME.github.io/ann-seismic/";
+  const DEPLOYED_URL = "https://kianokiano72.github.io/ann-seismic/";
   function buildQR() {
     const box = document.getElementById("qrcode");
     const link = document.getElementById("qrLink");
