@@ -29,7 +29,6 @@
   const leaky = (x, a) => (x > 0 ? x : a * x);
 
   function matVec(vec, kernel, bias) {
-    // kernel: [in][out]
     const out = bias.slice();
     for (let j = 0; j < out.length; j++) {
       let s = bias[j];
@@ -45,7 +44,7 @@
       a = matVec(a, weights[li].kernel, weights[li].bias);
       if (li < weights.length - 1) a = a.map((v) => leaky(v, M.leaky));
     }
-    return a; // scaled-y space
+    return a;
   }
 
   function predict(xRaw) {
@@ -60,11 +59,12 @@
     return ys.map((v, i) => v * M.scaler_y.scale[i] + M.scaler_y.mean[i]);
   }
 
-  // Empirical codes (H, Lxx, Lyy)
+  // ---- Empirical codes (H only — mixed/voiles defaults, most common in Algeria) ----
   const codes = {
-    rpa: (H, Lx, Ly) => [0.09 * H / Math.sqrt(Lx), 0.09 * H / Math.sqrt(Ly)],
-    ec8: (H) => { const v = 0.075 * Math.pow(H, 0.75); return [v, v]; },
-    asce:(H) => { const v = 0.0466 * Math.pow(H, 0.9);  return [v, v]; },
+    rpa:  (H) => { const v = 0.050 * Math.pow(H, 0.75); return [v, v]; },
+    ec8:  (H) => { const v = 0.075 * Math.pow(H, 0.75); return [v, v]; },
+    asce: (H) => { const v = 0.0466 * Math.pow(H, 0.90); return [v, v]; },
+    bsl:  (H) => { const v = 0.020 * H;                  return [v, v]; },
   };
 
   // ---- Metrics ----
@@ -77,6 +77,53 @@
   function rmse(yTrue, yPred) {
     let s = 0; for (let i = 0; i < yTrue.length; i++) s += (yTrue[i] - yPred[i]) ** 2;
     return Math.sqrt(s / yTrue.length);
+  }
+
+  // ========================================================================
+  // THEME (light / dark)
+  // ========================================================================
+  let _theme = "dark";
+
+  function getChartColors() {
+    const isLight = _theme === "light";
+    return {
+      text:   isLight ? "rgba(15,23,42,0.65)"  : "rgba(229,237,245,0.65)",
+      grid:   isLight ? "rgba(15,23,42,0.08)"  : "rgba(255,255,255,0.08)",
+      perfect: isLight ? "rgba(15,23,42,0.28)" : "rgba(255,255,255,0.35)",
+      ptBorder: isLight ? "#f1f5f9" : "#05070d",
+    };
+  }
+
+  function _updateThemeBtn() {
+    const sun  = document.getElementById("themeIconSun");
+    const moon = document.getElementById("themeIconMoon");
+    if (sun)  sun.classList.toggle("hidden",  _theme === "dark");
+    if (moon) moon.classList.toggle("hidden", _theme === "light");
+  }
+
+  function applyTheme(theme) {
+    _theme = theme;
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+    const cc = getChartColors();
+    Chart.defaults.color       = cc.text;
+    Chart.defaults.borderColor = cc.grid;
+    _updateThemeBtn();
+    // Redraw charts with updated palette
+    barChart();
+    drawScatter(scatterState.dim, scatterState.split);
+  }
+
+  function initTheme() {
+    const saved = localStorage.getItem("theme") || "dark";
+    _theme = saved;
+    document.documentElement.setAttribute("data-theme", saved);
+    const cc = getChartColors();
+    Chart.defaults.color       = cc.text;
+    Chart.defaults.borderColor = cc.grid;
+    _updateThemeBtn();
+    document.getElementById("themeBtn")?.addEventListener("click", () =>
+      applyTheme(_theme === "dark" ? "light" : "dark"));
   }
 
   // ========================================================================
@@ -104,7 +151,7 @@
   // ========================================================================
   function buildArch() {
     const el = document.getElementById("archDiagram");
-    const layers = M.arch; // [6,24,12,6,2]
+    const layers = M.arch;
     const labels = ["Input", "Dense", "Dense", "Dense", "Output"];
     const maxU = Math.max(...layers);
     el.innerHTML = layers.map((u, i) => {
@@ -126,7 +173,7 @@
   }
 
   // ========================================================================
-  // BUILD: predictor inputs
+  // BUILD: predictor inputs (no real-time prediction — needs Calculate click)
   // ========================================================================
   const state = {};
   function buildInputs() {
@@ -134,7 +181,6 @@
     el.innerHTML = M.features.map((f) => {
       const meta = FEATURE_META[f]; const st = M.feature_stats[f];
       const lo = meta.min, hi = meta.max;
-      // default = dataset median, snapped to the slider step and clamped to limits
       let def = Math.round(st.median / meta.step) * meta.step;
       def = Math.min(hi, Math.max(lo, round(def, 2)));
       state[f] = def;
@@ -152,14 +198,16 @@
     M.features.forEach((f) => {
       const r = document.getElementById("r-" + f);
       const n = document.getElementById("n-" + f);
-      r.addEventListener("input", () => { state[f] = parseFloat(r.value); n.value = state[f]; update(); });
+      // Sync slider ↔ number input only, no auto-calculate
+      r.addEventListener("input", () => { state[f] = parseFloat(r.value); n.value = state[f]; });
       n.addEventListener("input", () => {
         let v = parseFloat(n.value); if (isNaN(v)) return;
-        state[f] = v; r.value = v; update();
+        state[f] = v; r.value = v;
       });
     });
   }
 
+  // ---- Reset to medians (also triggers calculation) ----
   function resetInputs() {
     M.features.forEach((f) => {
       const meta = FEATURE_META[f]; const st = M.feature_stats[f];
@@ -169,7 +217,30 @@
       document.getElementById("r-" + f).value = v;
       document.getElementById("n-" + f).value = v;
     });
-    update();
+    runCalculation();
+  }
+
+  // ---- Calculate button with loading animation ----
+  function runCalculation() {
+    const btn     = document.getElementById("calcBtn");
+    const label   = document.getElementById("calcLabel");
+    const icon    = document.getElementById("calcIcon");
+    const spinner = document.getElementById("calcSpinner");
+
+    if (!btn) { update(); return; }
+
+    btn.disabled = true;
+    if (label)   label.textContent = "Computing…";
+    if (icon)    icon.classList.add("hidden");
+    if (spinner) spinner.classList.remove("hidden");
+
+    setTimeout(() => {
+      update();
+      btn.disabled = false;
+      if (label)   label.textContent = "Calculate Periods";
+      if (icon)    icon.classList.remove("hidden");
+      if (spinner) spinner.classList.add("hidden");
+    }, 1000);
   }
 
   // ========================================================================
@@ -181,7 +252,7 @@
     document.getElementById("outTx").textContent = tx.toFixed(3);
     document.getElementById("outTy").textContent = ty.toFixed(3);
 
-    // range check
+    // Range check
     const oob = [];
     M.features.forEach((f) => {
       const meta = FEATURE_META[f];
@@ -194,15 +265,15 @@
         `Outside the training range for: <strong>${oob.join(", ")}</strong>. The prediction is an extrapolation — treat it with caution.`;
     } else warn.classList.add("hidden");
 
-    // code comparison
-    const H = state.H_total, Lx = state.L_xx, Ly = state.L_yy;
+    // Empirical codes comparison (H only — no Lx/Ly)
+    const H = state.H_total;
     const rows = [
       { name: "ANN (this work)", v: [tx, ty], ref: true, color: "cyan" },
-      { name: "RPA 99/2003", v: codes.rpa(H, Lx, Ly), color: "rose" },
-      { name: "Eurocode 8", v: codes.ec8(H), color: "rose" },
-      { name: "ASCE 7-16", v: codes.asce(H), color: "rose" },
+      { name: "RPA 99/2003",   v: codes.rpa(H),  color: "rose" },
+      { name: "Eurocode 8",    v: codes.ec8(H),  color: "rose" },
+      { name: "ASCE 7-16",     v: codes.asce(H), color: "rose" },
     ];
-    const maxV = Math.max(...rows.flatMap((r) => r.v), tx, ty, 0.1);
+    const maxV = Math.max(...rows.flatMap((r) => r.v), 0.1);
     const cc = document.getElementById("codeCompare");
     cc.innerHTML = rows.map((r) => {
       const barColor = r.ref ? "from-cyan to-azure" : "from-rose-500/80 to-rose-400/50";
@@ -224,10 +295,7 @@
   // ========================================================================
   // CHARTS
   // ========================================================================
-  const FONT = "Inter, sans-serif";
-  Chart.defaults.color = "rgba(229,237,245,0.6)";
-  Chart.defaults.font.family = FONT;
-  Chart.defaults.borderColor = "rgba(255,255,255,0.08)";
+  Chart.defaults.font.family = "Inter, sans-serif";
 
   // Predictions for a split ("test" | "train"), computed live and cached
   const _splitCache = {};
@@ -244,46 +312,94 @@
     });
     return (_splitCache[which] = { trueTx, trueTy, predTx, predTy, H, Lx, Ly });
   }
-  function testArrays() { return splitArrays("test"); }
 
+  // ---- Bar chart: R² Train comparison ----
+  let barChartInst = null;
   function barChart() {
-    // Training-set R². ANN uses the thesis reference values (representative model);
-    // empirical codes are evaluated live on the training set.
+    if (barChartInst) { barChartInst.destroy(); barChartInst = null; }
+    const el = document.getElementById("barChart");
+    if (!el) return;
+
     const tr = splitArrays("train");
     const codeR2 = (dim, fn) => {
       const t = dim === 0 ? tr.trueTx : tr.trueTy;
-      const pred = tr.H.map((h, i) => fn(h, tr.Lx[i], tr.Ly[i])[dim]);
+      const pred = tr.H.map((h) => fn(h)[dim]);
       return r2(t, pred);
     };
-    const r2Tx = [0.900, codeR2(0, codes.rpa), codeR2(0, (h) => codes.ec8(h)), codeR2(0, (h) => codes.asce(h))];
-    const r2Ty = [0.800, codeR2(1, codes.rpa), codeR2(1, (h) => codes.ec8(h)), codeR2(1, (h) => codes.asce(h))];
 
-    new Chart(document.getElementById("barChart"), {
+    // ANN: thesis reference values. LR: V7 analysis values.
+    const r2Tx = [0.900, codeR2(0, codes.rpa), codeR2(0, codes.ec8), codeR2(0, codes.asce), 0.342];
+    const r2Ty = [0.800, codeR2(1, codes.rpa), codeR2(1, codes.ec8), codeR2(1, codes.asce), 0.216];
+    const cc = getChartColors();
+
+    const colorsTx = [
+      "rgba(34,211,238,0.85)",   // ANN — cyan
+      "rgba(244,114,182,0.72)",  // RPA — rose
+      "rgba(244,114,182,0.72)",  // EC8
+      "rgba(244,114,182,0.72)",  // ASCE
+      "rgba(52,211,153,0.85)",   // LR — emerald
+    ];
+    const colorsTy = [
+      "rgba(139,92,246,0.82)",
+      "rgba(244,114,182,0.45)",
+      "rgba(244,114,182,0.45)",
+      "rgba(244,114,182,0.45)",
+      "rgba(52,211,153,0.52)",
+    ];
+    const borderTx = ["#22d3ee","#f472b6","#f472b6","#f472b6","#34d399"];
+    const borderTy = ["#8b5cf6","#f472b6","#f472b6","#f472b6","#34d399"];
+
+    barChartInst = new Chart(el, {
       type: "bar",
       data: {
-        labels: ["ANN", "RPA 99/2003", "Eurocode 8", "ASCE 7-16"],
+        labels: [
+          "ANN\n(this work)",
+          "RPA 99/2003",
+          "Eurocode 8",
+          "ASCE 7-16",
+          ["Linear", "Regression"],
+        ],
         datasets: [
-          { label: "R² Tx", data: r2Tx, backgroundColor: "rgba(34,211,238,0.75)", borderColor: "#22d3ee", borderWidth: 1, borderRadius: 5 },
-          { label: "R² Ty", data: r2Ty, backgroundColor: "rgba(139,92,246,0.7)", borderColor: "#8b5cf6", borderWidth: 1, borderRadius: 5 },
+          { label: "R² Tx", data: r2Tx, backgroundColor: colorsTx, borderColor: borderTx, borderWidth: 1.5, borderRadius: 7, barPercentage: 0.8 },
+          { label: "R² Ty", data: r2Ty, backgroundColor: colorsTy, borderColor: borderTy, borderWidth: 1.5, borderRadius: 7, barPercentage: 0.8 },
         ],
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { labels: { usePointStyle: true, pointStyle: "rectRounded", padding: 16 } },
+          legend: {
+            labels: { usePointStyle: true, pointStyle: "rectRounded", padding: 20, color: cc.text, font: { size: 13 } },
+          },
           tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y.toFixed(3)}` } },
         },
         scales: {
-          y: { suggestedMin: -3, suggestedMax: 1, grid: { color: "rgba(255,255,255,0.06)" }, title: { display: true, text: "R² (train)", color: "rgba(229,237,245,0.5)" } },
-          x: { grid: { display: false } },
+          y: {
+            suggestedMin: -0.6,
+            suggestedMax: 1.05,
+            grid: { color: cc.grid },
+            ticks: { color: cc.text, font: { size: 12 } },
+            title: { display: true, text: "R² (train)", color: cc.text, font: { size: 13 } },
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: cc.text, maxRotation: 0, minRotation: 0, font: { size: 12 } },
+          },
         },
       },
     });
   }
 
+  // ---- Scatter chart ----
   let scatterChart = null;
+  const scatterState = { dim: 0, split: "test" };
+
   function drawScatter(dim, split) {
     split = split || "test";
+    if (scatterChart) { scatterChart.destroy(); scatterChart = null; }
+    const el = document.getElementById("scatterChart");
+    if (!el) return;
+
     const t = splitArrays(split);
     const trueA = dim === 0 ? t.trueTx : t.trueTy;
     const predA = dim === 0 ? t.predTx : t.predTy;
@@ -291,33 +407,43 @@
     const lo = Math.min(...trueA, ...predA) * 0.9;
     const hi = Math.max(...trueA, ...predA) * 1.08;
     const color = dim === 0 ? "#22d3ee" : "#8b5cf6";
+    const cc = getChartColors();
 
-    const data = {
-      datasets: [
-        { type: "line", label: "perfect", data: [{ x: lo, y: lo }, { x: hi, y: hi }], borderColor: "rgba(255,255,255,0.35)", borderDash: [6, 6], borderWidth: 1.5, pointRadius: 0, fill: false },
-        { type: "scatter", label: (dim === 0 ? "Tx" : "Ty"), data: pts, backgroundColor: color + "cc", borderColor: "#05070d", borderWidth: 1, pointRadius: 5, pointHoverRadius: 8 },
-      ],
-    };
-    const opts = {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: (c) => `measured ${c.parsed.x.toFixed(3)}s → predicted ${c.parsed.y.toFixed(3)}s` } },
+    scatterChart = new Chart(el, {
+      data: {
+        datasets: [
+          {
+            type: "line", label: "perfect",
+            data: [{ x: lo, y: lo }, { x: hi, y: hi }],
+            borderColor: cc.perfect, borderDash: [6, 6], borderWidth: 1.5, pointRadius: 0, fill: false,
+          },
+          {
+            type: "scatter", label: (dim === 0 ? "Tx" : "Ty"),
+            data: pts,
+            backgroundColor: color + "cc", borderColor: cc.ptBorder, borderWidth: 1,
+            pointRadius: 5, pointHoverRadius: 8,
+          },
+        ],
       },
-      scales: {
-        x: { type: "linear", min: lo, max: hi, title: { display: true, text: "Measured period (s)", color: "rgba(229,237,245,0.5)" }, grid: { color: "rgba(255,255,255,0.06)" } },
-        y: { type: "linear", min: lo, max: hi, title: { display: true, text: "Predicted period (s)", color: "rgba(229,237,245,0.5)" }, grid: { color: "rgba(255,255,255,0.06)" } },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (c) => `measured ${c.parsed.x.toFixed(3)}s → predicted ${c.parsed.y.toFixed(3)}s` } },
+        },
+        scales: {
+          x: { type: "linear", min: lo, max: hi, title: { display: true, text: "Measured period (s)", color: cc.text }, grid: { color: cc.grid }, ticks: { color: cc.text } },
+          y: { type: "linear", min: lo, max: hi, title: { display: true, text: "Predicted period (s)", color: cc.text }, grid: { color: cc.grid }, ticks: { color: cc.text } },
+        },
       },
-    };
-    if (scatterChart) { scatterChart.data = data; scatterChart.options = opts; scatterChart.update(); }
-    else scatterChart = new Chart(document.getElementById("scatterChart"), { data, options: opts });
+    });
   }
 
-  const scatterState = { dim: 0, split: "test" };
   const BTN_OFF = "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-white/5 text-white/60 border border-white/10";
-  const BTN_ON = "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-cyan/20 text-cyan-soft border border-cyan/30";
+  const BTN_ON  = "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-cyan/20 text-cyan-soft border border-cyan/30";
   function bindScatterToggle() {
-    const dimWrap = document.getElementById("scatterToggle");
+    const dimWrap   = document.getElementById("scatterToggle");
     const splitWrap = document.getElementById("scatterSplit");
     dimWrap.querySelectorAll("button").forEach((b) => {
       b.addEventListener("click", () => {
@@ -337,21 +463,20 @@
     });
   }
 
-  // Comparison table (train + test). Codes evaluated live on both splits;
-  // ANN train R² uses the thesis reference numbers (single representative model).
+  // ---- Comparison table (train + test) ----
   function buildTable() {
     const te = splitArrays("test"), tr = splitArrays("train");
     const codeR2 = (s, dim, fn) => {
       const t = (dim === 0 ? s.trueTx : s.trueTy);
-      const pred = s.H.map((h, i) => fn(h, s.Lx[i], s.Ly[i])[dim]);
+      const pred = s.H.map((h) => fn(h)[dim]);
       return r2(t, pred);
     };
     const codeRmse = (s, dim, fn) => {
       const t = (dim === 0 ? s.trueTx : s.trueTy);
-      const pred = s.H.map((h, i) => fn(h, s.Lx[i], s.Ly[i])[dim]);
+      const pred = s.H.map((h) => fn(h)[dim]);
       return rmse(t, pred);
     };
-    const rpa = codes.rpa, ec8 = (h) => codes.ec8(h), asce = (h) => codes.asce(h);
+    const rpa = codes.rpa, ec8 = codes.ec8, asce = codes.asce;
 
     const rows = [
       { n: "ANN (this work)", best: true,
@@ -371,7 +496,8 @@
         tex: codeR2(te, 0, asce), tey: codeR2(te, 1, asce),
         rx: codeRmse(te, 0, asce), ry: codeRmse(te, 1, asce) },
     ];
-    const cell = (v, good) => `<td class="py-3 text-right ${good ? "text-emerald-300" : v < 0 ? "text-rose-300" : "text-white/70"}">${v.toFixed(3)}</td>`;
+    const cell = (v, good) =>
+      `<td class="py-3 text-right ${good ? "text-emerald-300" : v < 0 ? "text-rose-300" : "text-white/70"}">${v.toFixed(3)}</td>`;
     document.getElementById("compTable").innerHTML = rows.map((r) =>
       `<tr class="border-b border-white/5 ${r.best ? "bg-cyan/[0.05]" : ""}">
         <td class="py-3 font-sans ${r.best ? "text-cyan-soft font-semibold" : "text-white/80"}">${r.n}</td>
@@ -382,24 +508,59 @@
   }
 
   // ========================================================================
-  // QR code — links to the live site
+  // QR code — links to the live site + click-to-zoom modal
   // ========================================================================
-  // After deploying, set DEPLOYED_URL to your public address (e.g. GitHub Pages).
-  // When the page is already served over http(s), the current URL is used automatically.
   const DEPLOYED_URL = "https://kianokiano72.github.io/ann-seismic/";
+  let _qrUrl = "";
+
   function buildQR() {
-    const box = document.getElementById("qrcode");
+    const box  = document.getElementById("qrcode");
     const link = document.getElementById("qrLink");
     if (!box || typeof qrcode === "undefined") return;
     const isHttp = location.protocol === "http:" || location.protocol === "https:";
-    const url = isHttp ? location.href.split("#")[0] : DEPLOYED_URL;
+    _qrUrl = isHttp ? location.href.split("#")[0] : DEPLOYED_URL;
+
     const qr = qrcode(0, "M");
-    qr.addData(url);
+    qr.addData(_qrUrl);
     qr.make();
     box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
     const svg = box.querySelector("svg");
     if (svg) { svg.setAttribute("width", "100%"); svg.setAttribute("height", "100%"); }
-    if (link) { link.textContent = url.replace(/^https?:\/\//, ""); link.href = url; }
+    if (link) { link.textContent = _qrUrl.replace(/^https?:\/\//, ""); link.href = _qrUrl; }
+
+    // Click-to-zoom (attach to the whole white card wrapper)
+    const qrWrap = box.closest(".qr-wrap") || box;
+    qrWrap.addEventListener("click", openQRModal);
+
+    // Close modal on backdrop click or Escape
+    const modal = document.getElementById("qrModal");
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeQRModal();
+      });
+    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeQRModal();
+    });
+  }
+
+  function openQRModal() {
+    const modal  = document.getElementById("qrModal");
+    const canvas = document.getElementById("qrModalCanvas");
+    if (!modal || !canvas || !_qrUrl) return;
+    const qr2 = qrcode(0, "M");
+    qr2.addData(_qrUrl);
+    qr2.make();
+    canvas.innerHTML = qr2.createSvgTag({ cellSize: 8, margin: 0, scalable: true });
+    const svg = canvas.querySelector("svg");
+    if (svg) { svg.setAttribute("width", "100%"); svg.setAttribute("height", "100%"); }
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+
+  function closeQRModal() {
+    const modal = document.getElementById("qrModal");
+    if (modal) { modal.classList.add("hidden"); modal.classList.remove("flex"); }
   }
 
   // ========================================================================
@@ -409,7 +570,7 @@
     const btn = document.getElementById("fsBtn");
     if (!btn) return;
     const enter = document.getElementById("fsEnter");
-    const exit = document.getElementById("fsExit");
+    const exit  = document.getElementById("fsExit");
     btn.addEventListener("click", () => {
       if (!document.fullscreenElement) {
         (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)
@@ -434,7 +595,6 @@
   function initReveal() {
     const els = Array.from(document.querySelectorAll(".reveal"));
     const vh = window.innerHeight || 800;
-    // Only hide elements that start below the fold — above-fold content shows immediately.
     els.forEach((e) => { if (e.getBoundingClientRect().top > vh * 0.85) e.classList.add("pre"); });
     const hidden = els.filter((e) => e.classList.contains("pre"));
     if (!("IntersectionObserver" in window)) { hidden.forEach((e) => e.classList.remove("pre")); return; }
@@ -442,7 +602,6 @@
       entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); e.target.classList.remove("pre"); io.unobserve(e.target); } });
     }, { threshold: 0.12 });
     hidden.forEach((e) => io.observe(e));
-    // Safety net: never leave content hidden if the observer misbehaves.
     setTimeout(() => hidden.forEach((e) => { e.classList.add("in"); e.classList.remove("pre"); }), 2500);
   }
 
@@ -450,17 +609,19 @@
   // INIT
   // ========================================================================
   document.addEventListener("DOMContentLoaded", () => {
+    initTheme();         // must be first — sets Chart.defaults before any chart is drawn
     buildFeatureCards();
     buildArch();
     buildInputs();
-    update();
+    // NOTE: no update() on load — outputs show "—" until user clicks Calculate
     barChart();
     drawScatter(0, "test");
     bindScatterToggle();
     buildTable();
     buildQR();
     bindFullscreen();
-    document.getElementById("resetBtn").addEventListener("click", resetInputs);
+    document.getElementById("resetBtn")?.addEventListener("click", resetInputs);
+    document.getElementById("calcBtn")?.addEventListener("click", runCalculation);
     initReveal();
     console.log("ANN ready · ensemble of", M.models.length, "models ·", M.n_buildings, "buildings");
   });
