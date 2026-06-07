@@ -551,15 +551,9 @@
     const qr2 = qrcode(0, "M");
     qr2.addData(_qrUrl);
     qr2.make();
-    canvas.innerHTML = qr2.createSvgTag({ cellSize: 6, margin: 1, scalable: true });
-    const svg = canvas.querySelector("svg");
-    if (svg) {
-      svg.setAttribute("width", "100%");
-      svg.setAttribute("height", "100%");
-      svg.style.display = "block";
-      svg.style.maxWidth = "100%";
-      svg.style.maxHeight = "100%";
-    }
+    // Use PNG data URL — renders pixel-perfect, no SVG alignment issues
+    const dataUrl = qr2.createDataURL(6, 2);
+    canvas.innerHTML = `<img src="${dataUrl}" alt="QR code" style="width:240px;height:240px;display:block;image-rendering:pixelated;" />`;
     modal.classList.remove("hidden");
     modal.classList.add("flex");
   }
@@ -570,7 +564,7 @@
   }
 
   // ========================================================================
-  // Full-screen toggle (with iOS pseudo-fullscreen fallback)
+  // Full-screen toggle
   // ========================================================================
   function bindFullscreen() {
     const btn   = document.getElementById("fsBtn");
@@ -578,48 +572,23 @@
     const enter = document.getElementById("fsEnter");
     const exit  = document.getElementById("fsExit");
 
-    const req = document.documentElement.requestFullscreen
-      || document.documentElement.webkitRequestFullscreen;
-    const ext = document.exitFullscreen
-      || document.webkitExitFullscreen;
-    const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
-
-    let pseudo = false;
-
-    const updateIcons = () => {
-      const on = !!(fsEl() || pseudo);
+    const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+    const sync = () => {
+      const on = isFs();
       enter?.classList.toggle("hidden", on);
       exit?.classList.toggle("hidden", !on);
     };
 
+    document.addEventListener("fullscreenchange",       sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+
     btn.addEventListener("click", () => {
-      if (req) {
-        if (!fsEl()) {
-          req.call(document.documentElement).catch(() => {
-            // Native failed (e.g. iOS) — fall back to CSS pseudo-fullscreen
-            pseudo = true;
-            document.documentElement.classList.add("pseudo-fs");
-            updateIcons();
-          });
-        } else {
-          ext?.call(document);
-        }
+      if (isFs()) {
+        (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
       } else {
-        // No native API (iOS Safari) — toggle CSS pseudo-fullscreen
-        pseudo = !pseudo;
-        document.documentElement.classList.toggle("pseudo-fs", pseudo);
-        updateIcons();
-      }
-    });
-
-    document.addEventListener("fullscreenchange", updateIcons);
-    document.addEventListener("webkitfullscreenchange", updateIcons);
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && pseudo) {
-        pseudo = false;
-        document.documentElement.classList.remove("pseudo-fs");
-        updateIcons();
+        const el = document.documentElement;
+        const fn = el.requestFullscreen || el.webkitRequestFullscreen;
+        fn?.call(el).catch?.(() => {});
       }
     });
   }
