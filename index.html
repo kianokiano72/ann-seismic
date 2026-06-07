@@ -555,8 +555,16 @@
       </div>
 
       <!-- Output -->
-      <div class="reveal space-y-5">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div class="reveal flex flex-col gap-5">
+        <!-- CALCULATE BUTTON — top on mobile, after Tx/Ty on desktop -->
+        <button id="calcBtn" type="button"
+          class="order-1 lg:order-2 cursor-pointer w-full rounded-2xl bg-gradient-to-r from-cyan to-azure px-6 py-4 font-display font-bold text-lg text-ink shadow-glow hover:shadow-[0_0_55px_-6px_rgba(34,211,238,0.7)] active:scale-[0.98] transition-all inline-flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed">
+          <svg id="calcIcon" viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-3 7h7l-9 13 3-9H4l9-11z"/></svg>
+          <span id="calcSpinner" class="hidden calc-spin h-5 w-5 border-2 border-ink border-t-transparent rounded-full"></span>
+          <span id="calcLabel">Calculate Periods</span>
+        </button>
+
+        <div class="order-2 lg:order-1 grid grid-cols-2 gap-5">
           <div class="glass rounded-2xl p-6 text-center shadow-glow">
             <div class="text-[11px] uppercase tracking-widest text-white/40">Period T<sub>x</sub></div>
             <div id="outTx" class="mt-2 font-mono period-out text-cyan-soft">—</div>
@@ -568,14 +576,6 @@
             <div class="text-xs text-white/40 mt-1">seconds</div>
           </div>
         </div>
-
-        <!-- CALCULATE BUTTON — under Tx / Ty -->
-        <button id="calcBtn" type="button"
-          class="cursor-pointer w-full rounded-2xl bg-gradient-to-r from-cyan to-azure px-6 py-4 font-display font-bold text-lg text-ink shadow-glow hover:shadow-[0_0_55px_-6px_rgba(34,211,238,0.7)] active:scale-[0.98] transition-all inline-flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed">
-          <svg id="calcIcon" viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-3 7h7l-9 13 3-9H4l9-11z"/></svg>
-          <span id="calcSpinner" class="hidden calc-spin h-5 w-5 border-2 border-ink border-t-transparent rounded-full"></span>
-          <span id="calcLabel">Calculate Periods</span>
-        </button>
 
         <div class="glass rounded-2xl p-7">
           <div class="flex items-center justify-between mb-5">
