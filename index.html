@@ -192,6 +192,9 @@
   html[data-theme="light"] #qrLink { color: #0284c7 !important; }
   html[data-theme="light"] .qr-wrap::after { color: #94a3b8; }
 
+  /* iOS pseudo-fullscreen fallback */
+  html.pseudo-fs { position: fixed; inset: 0; width: 100%; height: 100%; overflow-y: scroll; overscroll-behavior: none; }
+
   @media (prefers-reduced-motion: reduce) {
     .reveal { transition: none; opacity:1; transform:none; }
     .animate-floaty, .animate-pulseLine { animation: none; }
@@ -204,7 +207,7 @@
 <!-- ░░ QR ZOOM MODAL ░░ -->
 <div id="qrModal" class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/75 backdrop-blur-md cursor-pointer" role="dialog" aria-modal="true" aria-label="QR Code enlarged">
   <div class="bg-white rounded-3xl p-8 shadow-2xl cursor-default max-w-[320px] w-full mx-4 text-center" onclick="event.stopPropagation()">
-    <div id="qrModalCanvas" class="w-64 h-64 mx-auto rounded-xl overflow-hidden"></div>
+    <div id="qrModalCanvas" class="w-64 h-64 mx-auto rounded-xl overflow-hidden flex items-center justify-center"></div>
     <p class="mt-5 text-slate-700 font-semibold text-sm">Scan to open the website</p>
     <p class="mt-1 text-slate-400 text-xs">Tap outside or press Esc to close</p>
   </div>

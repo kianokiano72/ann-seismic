@@ -551,9 +551,15 @@
     const qr2 = qrcode(0, "M");
     qr2.addData(_qrUrl);
     qr2.make();
-    canvas.innerHTML = qr2.createSvgTag({ cellSize: 8, margin: 0, scalable: true });
+    canvas.innerHTML = qr2.createSvgTag({ cellSize: 6, margin: 1, scalable: true });
     const svg = canvas.querySelector("svg");
-    if (svg) { svg.setAttribute("width", "100%"); svg.setAttribute("height", "100%"); }
+    if (svg) {
+      svg.setAttribute("width", "100%");
+      svg.setAttribute("height", "100%");
+      svg.style.display = "block";
+      svg.style.maxWidth = "100%";
+      svg.style.maxHeight = "100%";
+    }
     modal.classList.remove("hidden");
     modal.classList.add("flex");
   }
@@ -564,25 +570,57 @@
   }
 
   // ========================================================================
-  // Full-screen toggle
+  // Full-screen toggle (with iOS pseudo-fullscreen fallback)
   // ========================================================================
   function bindFullscreen() {
-    const btn = document.getElementById("fsBtn");
+    const btn   = document.getElementById("fsBtn");
     if (!btn) return;
     const enter = document.getElementById("fsEnter");
     const exit  = document.getElementById("fsExit");
+
+    const req = document.documentElement.requestFullscreen
+      || document.documentElement.webkitRequestFullscreen;
+    const ext = document.exitFullscreen
+      || document.webkitExitFullscreen;
+    const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+
+    let pseudo = false;
+
+    const updateIcons = () => {
+      const on = !!(fsEl() || pseudo);
+      enter?.classList.toggle("hidden", on);
+      exit?.classList.toggle("hidden", !on);
+    };
+
     btn.addEventListener("click", () => {
-      if (!document.fullscreenElement) {
-        (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)
-          ?.call(document.documentElement);
+      if (req) {
+        if (!fsEl()) {
+          req.call(document.documentElement).catch(() => {
+            // Native failed (e.g. iOS) — fall back to CSS pseudo-fullscreen
+            pseudo = true;
+            document.documentElement.classList.add("pseudo-fs");
+            updateIcons();
+          });
+        } else {
+          ext?.call(document);
+        }
       } else {
-        (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+        // No native API (iOS Safari) — toggle CSS pseudo-fullscreen
+        pseudo = !pseudo;
+        document.documentElement.classList.toggle("pseudo-fs", pseudo);
+        updateIcons();
       }
     });
-    document.addEventListener("fullscreenchange", () => {
-      const on = !!document.fullscreenElement;
-      enter.classList.toggle("hidden", on);
-      exit.classList.toggle("hidden", !on);
+
+    document.addEventListener("fullscreenchange", updateIcons);
+    document.addEventListener("webkitfullscreenchange", updateIcons);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && pseudo) {
+        pseudo = false;
+        document.documentElement.classList.remove("pseudo-fs");
+        updateIcons();
+      }
     });
   }
 
