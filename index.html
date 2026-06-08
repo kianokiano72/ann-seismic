@@ -453,8 +453,8 @@
     <!-- Bar chart (TALL) -->
     <div class="mt-8">
       <div class="reveal glass rounded-2xl p-6 sm:p-8">
-        <h3 class="font-display font-semibold text-lg">R² Train — ANN vs empirical codes vs Linear Regression</h3>
-        <p class="text-sm text-white/50 mt-1 mb-6">Higher is better. Negative R² means the formula predicts worse than the dataset mean. LR values from V7 analysis.</p>
+        <h3 class="font-display font-semibold text-lg">R² comparison — ANN (train) vs empirical codes (full dataset)</h3>
+        <p class="text-sm text-white/50 mt-1 mb-6">Higher is better. Negative R² = worse than predicting the mean. ANN R² is on the training set; codes have no training phase and are evaluated on all 96 buildings.</p>
         <div class="h-[480px] sm:h-[560px]"><canvas id="barChart"></canvas></div>
       </div>
     </div>
@@ -482,22 +482,25 @@
 
     <!-- Comparison table -->
     <div class="reveal mt-6 glass rounded-2xl p-6 sm:p-8 overflow-x-auto">
-      <h3 class="font-display font-semibold text-lg mb-5">Full comparison — Train &amp; Test</h3>
+      <h3 class="font-display font-semibold text-lg mb-5">Full comparison — ANN vs Empirical Codes</h3>
       <table class="w-full text-sm min-w-[720px]">
         <thead>
           <tr class="text-white/45 text-left text-[11px] uppercase tracking-widest border-b border-white/10">
             <th class="pb-3 font-medium">Model</th>
             <th class="pb-3 font-medium text-right">R²&nbsp;Train T<sub>x</sub></th>
             <th class="pb-3 font-medium text-right">R²&nbsp;Train T<sub>y</sub></th>
-            <th class="pb-3 font-medium text-right">R²&nbsp;Test T<sub>x</sub></th>
-            <th class="pb-3 font-medium text-right">R²&nbsp;Test T<sub>y</sub></th>
-            <th class="pb-3 font-medium text-right">RMSE T<sub>x</sub></th>
-            <th class="pb-3 font-medium text-right">RMSE T<sub>y</sub></th>
+            <th class="pb-3 font-medium text-right">R²&nbsp;† T<sub>x</sub></th>
+            <th class="pb-3 font-medium text-right">R²&nbsp;† T<sub>y</sub></th>
+            <th class="pb-3 font-medium text-right">RMSE&nbsp;† T<sub>x</sub></th>
+            <th class="pb-3 font-medium text-right">RMSE&nbsp;† T<sub>y</sub></th>
           </tr>
         </thead>
         <tbody id="compTable" class="font-mono"></tbody>
       </table>
-      <p class="text-[11px] text-white/35 mt-4">RMSE on the test set (seconds). Empirical formulas have no training phase; their train-set R² is shown for reference.</p>
+      <p class="text-[11px] text-white/35 mt-4">
+        † ANN: evaluated on the held-out <strong class="text-white/50">test set</strong> (20 buildings the model never saw).
+        Empirical codes: evaluated on the <strong class="text-white/50">full dataset (96 buildings)</strong> — they have no training phase, no train/test split. RMSE in seconds.
+      </p>
     </div>
 
     <!-- Honest note on generalization -->

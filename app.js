@@ -297,11 +297,16 @@
   // ========================================================================
   Chart.defaults.font.family = "Inter, sans-serif";
 
-  // Predictions for a split ("test" | "train"), computed live and cached
+  // Predictions for a split ("test" | "train" | "all"), computed live and cached
   const _splitCache = {};
   function splitArrays(which) {
     if (_splitCache[which]) return _splitCache[which];
-    const idxs = which === "train" ? M.dataset.train_idx : M.dataset.test_idx;
+    let idxs;
+    if (which === "all") {
+      idxs = [...M.dataset.train_idx, ...M.dataset.test_idx].sort((a, b) => a - b);
+    } else {
+      idxs = which === "train" ? M.dataset.train_idx : M.dataset.test_idx;
+    }
     const trueTx = [], trueTy = [], predTx = [], predTy = [], H = [], Lx = [], Ly = [];
     idxs.forEach((idx) => {
       const x = M.dataset.X[idx];
@@ -313,17 +318,17 @@
     return (_splitCache[which] = { trueTx, trueTy, predTx, predTy, H, Lx, Ly });
   }
 
-  // ---- Bar chart: R² Train comparison ----
+  // ---- Bar chart: R² comparison (ANN=train, codes=full dataset) ----
   let barChartInst = null;
   function barChart() {
     if (barChartInst) { barChartInst.destroy(); barChartInst = null; }
     const el = document.getElementById("barChart");
     if (!el) return;
 
-    const tr = splitArrays("train");
+    const all = splitArrays("all");
     const codeR2 = (dim, fn) => {
-      const t = dim === 0 ? tr.trueTx : tr.trueTy;
-      const pred = tr.H.map((h) => fn(h)[dim]);
+      const t = dim === 0 ? all.trueTx : all.trueTy;
+      const pred = all.H.map((h) => fn(h)[dim]);
       return r2(t, pred);
     };
 
@@ -463,45 +468,46 @@
     });
   }
 
-  // ---- Comparison table (train + test) ----
+  // ---- Comparison table ----
+  // ANN: R²-Train | R²-Test | RMSE-Test
+  // Codes: — (no training) | R²-full | RMSE-full
   function buildTable() {
-    const te = splitArrays("test"), tr = splitArrays("train");
-    const codeR2 = (s, dim, fn) => {
-      const t = (dim === 0 ? s.trueTx : s.trueTy);
-      const pred = s.H.map((h) => fn(h)[dim]);
-      return r2(t, pred);
-    };
-    const codeRmse = (s, dim, fn) => {
-      const t = (dim === 0 ? s.trueTx : s.trueTy);
-      const pred = s.H.map((h) => fn(h)[dim]);
-      return rmse(t, pred);
-    };
+    const te  = splitArrays("test");
+    const all = splitArrays("all");
+    const evR2   = (s, dim, fn) => { const t = dim===0?s.trueTx:s.trueTy; return r2(t, s.H.map(h=>fn(h)[dim])); };
+    const evRmse = (s, dim, fn) => { const t = dim===0?s.trueTx:s.trueTy; return rmse(t, s.H.map(h=>fn(h)[dim])); };
     const rpa = codes.rpa, ec8 = codes.ec8, asce = codes.asce;
 
     const rows = [
       { n: "ANN (this work)", best: true,
-        trx: 0.900, trly: 0.800,
-        tex: r2(te.trueTx, te.predTx), tey: r2(te.trueTy, te.predTy),
-        rx: rmse(te.trueTx, te.predTx), ry: rmse(te.trueTy, te.predTy) },
-      { n: "RPA 99/2003",
-        trx: codeR2(tr, 0, rpa), trly: codeR2(tr, 1, rpa),
-        tex: codeR2(te, 0, rpa), tey: codeR2(te, 1, rpa),
-        rx: codeRmse(te, 0, rpa), ry: codeRmse(te, 1, rpa) },
-      { n: "Eurocode 8",
-        trx: codeR2(tr, 0, ec8), trly: codeR2(tr, 1, ec8),
-        tex: codeR2(te, 0, ec8), tey: codeR2(te, 1, ec8),
-        rx: codeRmse(te, 0, ec8), ry: codeRmse(te, 1, ec8) },
-      { n: "ASCE 7-16",
-        trx: codeR2(tr, 0, asce), trly: codeR2(tr, 1, asce),
-        tex: codeR2(te, 0, asce), tey: codeR2(te, 1, asce),
-        rx: codeRmse(te, 0, asce), ry: codeRmse(te, 1, asce) },
+        trx: 0.900,  trly: 0.800,
+        r2x: r2(te.trueTx, te.predTx),   r2y: r2(te.trueTy, te.predTy),
+        rx:  rmse(te.trueTx, te.predTx), ry:  rmse(te.trueTy, te.predTy) },
+      { n: "RPA 99/2003", best: false,
+        trx: null, trly: null,
+        r2x: evR2(all,0,rpa),   r2y: evR2(all,1,rpa),
+        rx:  evRmse(all,0,rpa), ry:  evRmse(all,1,rpa) },
+      { n: "Eurocode 8", best: false,
+        trx: null, trly: null,
+        r2x: evR2(all,0,ec8),   r2y: evR2(all,1,ec8),
+        rx:  evRmse(all,0,ec8), ry:  evRmse(all,1,ec8) },
+      { n: "ASCE 7-16", best: false,
+        trx: null, trly: null,
+        r2x: evR2(all,0,asce),   r2y: evR2(all,1,asce),
+        rx:  evRmse(all,0,asce), ry:  evRmse(all,1,asce) },
     ];
-    const cell = (v, good) =>
+
+    const cellNum = (v, good) =>
       `<td class="py-3 text-right ${good ? "text-emerald-300" : v < 0 ? "text-rose-300" : "text-white/70"}">${v.toFixed(3)}</td>`;
+    const cellNA = () =>
+      `<td class="py-3 text-right text-white/25 font-sans text-xs not-italic">—</td>`;
+
     document.getElementById("compTable").innerHTML = rows.map((r) =>
       `<tr class="border-b border-white/5 ${r.best ? "bg-cyan/[0.05]" : ""}">
         <td class="py-3 font-sans ${r.best ? "text-cyan-soft font-semibold" : "text-white/80"}">${r.n}</td>
-        ${cell(r.trx, r.best)}${cell(r.trly, r.best)}${cell(r.tex, r.best)}${cell(r.tey, r.best)}
+        ${r.trx !== null ? cellNum(r.trx, r.best) : cellNA()}
+        ${r.trly !== null ? cellNum(r.trly, r.best) : cellNA()}
+        ${cellNum(r.r2x, r.best)}${cellNum(r.r2y, r.best)}
         <td class="py-3 text-right text-white/70">${r.rx.toFixed(3)}</td>
         <td class="py-3 text-right text-white/70">${r.ry.toFixed(3)}</td>
       </tr>`).join("");
