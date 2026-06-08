@@ -489,16 +489,16 @@
             <th class="pb-3 font-medium">Model</th>
             <th class="pb-3 font-medium text-right">R²&nbsp;Train T<sub>x</sub></th>
             <th class="pb-3 font-medium text-right">R²&nbsp;Train T<sub>y</sub></th>
-            <th class="pb-3 font-medium text-right">R²&nbsp;† T<sub>x</sub></th>
-            <th class="pb-3 font-medium text-right">R²&nbsp;† T<sub>y</sub></th>
-            <th class="pb-3 font-medium text-right">RMSE&nbsp;† T<sub>x</sub></th>
-            <th class="pb-3 font-medium text-right">RMSE&nbsp;† T<sub>y</sub></th>
+            <th class="pb-3 font-medium text-right">R²&nbsp;* T<sub>x</sub></th>
+            <th class="pb-3 font-medium text-right">R²&nbsp;* T<sub>y</sub></th>
+            <th class="pb-3 font-medium text-right">RMSE&nbsp;* T<sub>x</sub></th>
+            <th class="pb-3 font-medium text-right">RMSE&nbsp;* T<sub>y</sub></th>
           </tr>
         </thead>
         <tbody id="compTable" class="font-mono"></tbody>
       </table>
       <p class="text-[11px] text-white/35 mt-4">
-        † ANN: evaluated on the held-out <strong class="text-white/50">test set</strong> (20 buildings the model never saw).
+        * ANN: evaluated on the held-out <strong class="text-white/50">test set</strong> (20 buildings the model never saw).
         Empirical codes: evaluated on the <strong class="text-white/50">full dataset (96 buildings)</strong> — they have no training phase, no train/test split. RMSE in seconds.
       </p>
     </div>
