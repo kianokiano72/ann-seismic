@@ -1,5 +1,5 @@
 /* ============================================================================
-   ANN Fondamental Period — front-end logic
+   ANN Fundamental Period — front-end logic
    Real prediction: StandardScaler(X) -> [Dense+LeakyReLU]x3 -> Dense(2) -> mean
    over 5 seeds -> inverse StandardScaler(y). Verified identical to Keras.
    ========================================================================== */
