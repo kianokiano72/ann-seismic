@@ -393,10 +393,10 @@
 
   // ---- Scatter chart ----
   let scatterChart = null;
-  const scatterState = { dim: 0, split: "test" };
+  const scatterState = { dim: 0, split: "train" };
 
   function drawScatter(dim, split) {
-    split = split || "test";
+    split = split || "train";
     if (scatterChart) { scatterChart.destroy(); scatterChart = null; }
     const el = document.getElementById("scatterChart");
     if (!el) return;

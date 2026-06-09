@@ -193,6 +193,15 @@
   html[data-theme="light"] #qrLink { color: #0284c7 !important; }
   html[data-theme="light"] .qr-wrap::after { color: #94a3b8; }
 
+  @media (max-width: 639px) {
+    #scatterWrapper {
+      aspect-ratio: 1 / 1;
+      height: auto !important;
+      max-width: 320px;
+      margin-inline: auto;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .reveal { transition: none; opacity:1; transform:none; }
     .animate-floaty, .animate-pulseLine { animation: none; }
@@ -482,8 +491,8 @@
         </div>
         <div class="flex flex-wrap gap-3">
           <div class="flex gap-2" id="scatterSplit">
-            <button data-s="test"  class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-cyan/20 text-cyan-soft border border-cyan/30">Test</button>
-            <button data-s="train" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-white/5 text-white/60 border border-white/10">Train</button>
+            <button data-s="train" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-cyan/20 text-cyan-soft border border-cyan/30">Train</button>
+            <button data-s="test"  class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-white/5 text-white/60 border border-white/10">Test</button>
           </div>
           <div class="flex gap-2" id="scatterToggle">
             <button data-t="0" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-cyan/20 text-cyan-soft border border-cyan/30">T<sub>x</sub></button>
@@ -491,7 +500,7 @@
           </div>
         </div>
       </div>
-      <div class="h-[380px] sm:h-[460px] mt-5"><canvas id="scatterChart"></canvas></div>
+      <div id="scatterWrapper" class="sm:h-[460px] mt-5"><canvas id="scatterChart"></canvas></div>
     </div>
 
     <!-- Comparison table -->
