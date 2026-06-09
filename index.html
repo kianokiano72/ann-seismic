@@ -208,6 +208,11 @@
     }
   }
 
+  @media (min-width: 768px) {
+    .charts-container { display: flex; gap: 24px; }
+    .chart-card { flex: 1; min-width: 0; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .reveal { transition: none; opacity:1; transform:none; }
     .animate-floaty, .animate-pulseLine { animation: none; }
@@ -479,17 +484,18 @@
       </div>
     </div>
 
-    <!-- Bar chart (TALL) -->
-    <div class="mt-8">
-      <div class="reveal glass rounded-2xl p-6 sm:p-8">
+    <!-- Charts: side by side on desktop, stacked on mobile -->
+    <div class="charts-container mt-8">
+
+      <!-- Bar chart -->
+      <div class="chart-card reveal glass rounded-2xl p-6 sm:p-8">
         <h3 class="font-display font-semibold text-lg">R² comparison — ANN (train) vs empirical codes (full dataset)</h3>
         <p class="text-sm text-white/50 mt-1 mb-6">Higher is better. Negative R² = worse than predicting the mean. ANN R² is on the training set; codes have no training phase and are evaluated on all 96 buildings.</p>
-        <div class="h-[300px] sm:h-[420px] lg:h-[560px]"><canvas id="barChart"></canvas></div>
+        <div class="h-[300px] sm:h-[420px] md:h-[460px]"><canvas id="barChart"></canvas></div>
       </div>
-    </div>
 
-    <!-- Scatter chart (TALL) -->
-    <div class="reveal mt-6 glass rounded-2xl p-6 sm:p-8">
+      <!-- Scatter chart -->
+      <div class="chart-card reveal md:mt-0 mt-6 glass rounded-2xl p-6 sm:p-8">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 class="font-display font-semibold text-lg">Predicted vs measured period</h3>
@@ -506,8 +512,10 @@
           </div>
         </div>
       </div>
-      <div id="scatterWrapper" class="sm:h-[460px] mt-5"><canvas id="scatterChart"></canvas></div>
+      <div id="scatterWrapper" class="sm:h-[420px] md:h-[460px] mt-5"><canvas id="scatterChart"></canvas></div>
     </div>
+
+    </div><!-- end charts-container -->
 
     <!-- Comparison table -->
     <div class="reveal mt-6 glass rounded-2xl p-6 sm:p-8 overflow-x-auto">
