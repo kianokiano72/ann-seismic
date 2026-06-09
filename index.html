@@ -206,6 +206,10 @@
     #hero p  { font-size: 0.8rem !important; margin-top: 0.75rem; }
     #hero .mt-9 { margin-top: 1rem; }
     #hero .mt-14 { margin-top: 1.5rem; }
+    /* Compact nav in landscape */
+    header { top: 0.35rem; left: 0.5rem; right: 0.5rem; }
+    header nav { padding: 0.4rem 0.85rem !important; border-radius: 0.875rem; }
+    header nav #themeBtn, header nav #fsBtn { height: 2rem; width: 2rem; }
   }
 </style>
 </head>
@@ -232,7 +236,7 @@
         <span class="logo-subtitle hidden sm:block">Fundamental Period Estimator</span>
       </span>
     </a>
-    <div class="hidden md:flex items-center gap-7 text-sm text-white/70 font-medium">
+    <div class="hidden lg:flex items-center gap-7 text-sm text-white/70 font-medium">
       <a href="#abstract" class="nav-link hover:text-white transition-colors">Overview</a>
       <a href="#method" class="nav-link hover:text-white transition-colors">Methodology</a>
       <a href="#results" class="nav-link hover:text-white transition-colors">Results</a>

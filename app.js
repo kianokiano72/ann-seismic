@@ -365,8 +365,8 @@
       data: {
         labels,
         datasets: [
-          { label: "R² Tx", data: r2Tx, backgroundColor: colorsTx, borderColor: borderTx, borderWidth: 1.5, borderRadius: mob ? 4 : 7, barPercentage: 0.8 },
-          { label: "R² Ty", data: r2Ty, backgroundColor: colorsTy, borderColor: borderTy, borderWidth: 1.5, borderRadius: mob ? 4 : 7, barPercentage: 0.8 },
+          { label: "R² Tx", data: r2Tx, backgroundColor: colorsTx, borderColor: borderTx, borderWidth: 1.5, borderRadius: mob ? 3 : 7, barPercentage: mob ? 0.55 : 0.75, categoryPercentage: mob ? 0.8 : 0.9 },
+          { label: "R² Ty", data: r2Ty, backgroundColor: colorsTy, borderColor: borderTy, borderWidth: 1.5, borderRadius: mob ? 3 : 7, barPercentage: mob ? 0.55 : 0.75, categoryPercentage: mob ? 0.8 : 0.9 },
         ],
       },
       options: {
