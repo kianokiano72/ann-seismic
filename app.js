@@ -354,19 +354,15 @@
     const borderTx = ["#22d3ee","#f472b6","#f472b6","#f472b6","#34d399"];
     const borderTy = ["#8b5cf6","#f472b6","#f472b6","#f472b6","#34d399"];
 
-    const mob = window.innerWidth < 640;
-    const fs  = mob ? 10 : 12;
-    const labels = mob
-      ? ["ANN", "RPA", "EC8", "ASCE", "Lin.Reg"]
-      : ["ANN\n(this work)", "RPA 99/2003", "Eurocode 8", "ASCE 7-16", ["Linear", "Regression"]];
+    const labels = ["ANN\n(this work)", "RPA 99/2003", "Eurocode 8", "ASCE 7-16", ["Linear", "Regression"]];
 
     barChartInst = new Chart(el, {
       type: "bar",
       data: {
         labels,
         datasets: [
-          { label: "R² Tx", data: r2Tx, backgroundColor: colorsTx, borderColor: borderTx, borderWidth: 1.5, borderRadius: mob ? 3 : 7, barPercentage: mob ? 0.55 : 0.75, categoryPercentage: mob ? 0.8 : 0.9 },
-          { label: "R² Ty", data: r2Ty, backgroundColor: colorsTy, borderColor: borderTy, borderWidth: 1.5, borderRadius: mob ? 3 : 7, barPercentage: mob ? 0.55 : 0.75, categoryPercentage: mob ? 0.8 : 0.9 },
+          { label: "R² Tx", data: r2Tx, backgroundColor: colorsTx, borderColor: borderTx, borderWidth: 1.5, borderRadius: 7, barPercentage: 0.75, categoryPercentage: 0.9 },
+          { label: "R² Ty", data: r2Ty, backgroundColor: colorsTy, borderColor: borderTy, borderWidth: 1.5, borderRadius: 7, barPercentage: 0.75, categoryPercentage: 0.9 },
         ],
       },
       options: {
@@ -374,7 +370,7 @@
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            labels: { usePointStyle: true, pointStyle: "rectRounded", padding: mob ? 10 : 20, color: cc.text, font: { size: fs + 1 } },
+            labels: { usePointStyle: true, pointStyle: "rectRounded", padding: 20, color: cc.text, font: { size: 13 } },
           },
           tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y.toFixed(3)}` } },
         },
@@ -383,12 +379,12 @@
             suggestedMin: -0.6,
             suggestedMax: 1.05,
             grid: { color: cc.grid },
-            ticks: { color: cc.text, font: { size: fs } },
-            title: { display: !mob, text: "R²", color: cc.text, font: { size: fs + 1 } },
+            ticks: { color: cc.text, font: { size: 12 } },
+            title: { display: true, text: "R²", color: cc.text, font: { size: 13 } },
           },
           x: {
             grid: { display: false },
-            ticks: { color: cc.text, maxRotation: mob ? 35 : 0, minRotation: 0, font: { size: fs } },
+            ticks: { color: cc.text, maxRotation: 0, minRotation: 0, font: { size: 12 } },
           },
         },
       },
