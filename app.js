@@ -414,9 +414,6 @@
     const color = dim === 0 ? "#22d3ee" : "#8b5cf6";
     const cc = getChartColors();
 
-    const mob = window.innerWidth < 640;
-    const fs  = mob ? 10 : 12;
-
     scatterChart = new Chart(el, {
       data: {
         datasets: [
@@ -429,7 +426,7 @@
             type: "scatter", label: (dim === 0 ? "Tx" : "Ty"),
             data: pts,
             backgroundColor: color + "cc", borderColor: cc.ptBorder, borderWidth: 1,
-            pointRadius: mob ? 3 : 5, pointHoverRadius: mob ? 5 : 8,
+            pointRadius: 5, pointHoverRadius: 8,
           },
         ],
       },
@@ -443,15 +440,15 @@
         scales: {
           x: {
             type: "linear", min: lo, max: hi,
-            title: { display: !mob, text: "Measured period (s)", color: cc.text, font: { size: fs } },
+            title: { display: true, text: "Measured period (s)", color: cc.text, font: { size: 12 } },
             grid: { color: cc.grid },
-            ticks: { color: cc.text, font: { size: fs }, maxTicksLimit: mob ? 5 : 8 },
+            ticks: { color: cc.text, font: { size: 12 }, maxTicksLimit: 8 },
           },
           y: {
             type: "linear", min: lo, max: hi,
-            title: { display: !mob, text: "Predicted period (s)", color: cc.text, font: { size: fs } },
+            title: { display: true, text: "Predicted period (s)", color: cc.text, font: { size: 12 } },
             grid: { color: cc.grid },
-            ticks: { color: cc.text, font: { size: fs }, maxTicksLimit: mob ? 5 : 8 },
+            ticks: { color: cc.text, font: { size: 12 }, maxTicksLimit: 8 },
           },
         },
       },
