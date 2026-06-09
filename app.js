@@ -354,19 +354,19 @@
     const borderTx = ["#22d3ee","#f472b6","#f472b6","#f472b6","#34d399"];
     const borderTy = ["#8b5cf6","#f472b6","#f472b6","#f472b6","#34d399"];
 
+    const mob = window.innerWidth < 640;
+    const fs  = mob ? 10 : 12;
+    const labels = mob
+      ? ["ANN", "RPA", "EC8", "ASCE", "Lin.Reg"]
+      : ["ANN\n(this work)", "RPA 99/2003", "Eurocode 8", "ASCE 7-16", ["Linear", "Regression"]];
+
     barChartInst = new Chart(el, {
       type: "bar",
       data: {
-        labels: [
-          "ANN\n(this work)",
-          "RPA 99/2003",
-          "Eurocode 8",
-          "ASCE 7-16",
-          ["Linear", "Regression"],
-        ],
+        labels,
         datasets: [
-          { label: "R² Tx", data: r2Tx, backgroundColor: colorsTx, borderColor: borderTx, borderWidth: 1.5, borderRadius: 7, barPercentage: 0.8 },
-          { label: "R² Ty", data: r2Ty, backgroundColor: colorsTy, borderColor: borderTy, borderWidth: 1.5, borderRadius: 7, barPercentage: 0.8 },
+          { label: "R² Tx", data: r2Tx, backgroundColor: colorsTx, borderColor: borderTx, borderWidth: 1.5, borderRadius: mob ? 4 : 7, barPercentage: 0.8 },
+          { label: "R² Ty", data: r2Ty, backgroundColor: colorsTy, borderColor: borderTy, borderWidth: 1.5, borderRadius: mob ? 4 : 7, barPercentage: 0.8 },
         ],
       },
       options: {
@@ -374,7 +374,7 @@
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            labels: { usePointStyle: true, pointStyle: "rectRounded", padding: 20, color: cc.text, font: { size: 13 } },
+            labels: { usePointStyle: true, pointStyle: "rectRounded", padding: mob ? 10 : 20, color: cc.text, font: { size: fs + 1 } },
           },
           tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y.toFixed(3)}` } },
         },
@@ -383,12 +383,12 @@
             suggestedMin: -0.6,
             suggestedMax: 1.05,
             grid: { color: cc.grid },
-            ticks: { color: cc.text, font: { size: 12 } },
-            title: { display: true, text: "R² (train)", color: cc.text, font: { size: 13 } },
+            ticks: { color: cc.text, font: { size: fs } },
+            title: { display: !mob, text: "R²", color: cc.text, font: { size: fs + 1 } },
           },
           x: {
             grid: { display: false },
-            ticks: { color: cc.text, maxRotation: 0, minRotation: 0, font: { size: 12 } },
+            ticks: { color: cc.text, maxRotation: mob ? 35 : 0, minRotation: 0, font: { size: fs } },
           },
         },
       },
@@ -414,6 +414,9 @@
     const color = dim === 0 ? "#22d3ee" : "#8b5cf6";
     const cc = getChartColors();
 
+    const mob = window.innerWidth < 640;
+    const fs  = mob ? 10 : 12;
+
     scatterChart = new Chart(el, {
       data: {
         datasets: [
@@ -426,7 +429,7 @@
             type: "scatter", label: (dim === 0 ? "Tx" : "Ty"),
             data: pts,
             backgroundColor: color + "cc", borderColor: cc.ptBorder, borderWidth: 1,
-            pointRadius: 5, pointHoverRadius: 8,
+            pointRadius: mob ? 3 : 5, pointHoverRadius: mob ? 5 : 8,
           },
         ],
       },
@@ -438,8 +441,18 @@
           tooltip: { callbacks: { label: (c) => `measured ${c.parsed.x.toFixed(3)}s → predicted ${c.parsed.y.toFixed(3)}s` } },
         },
         scales: {
-          x: { type: "linear", min: lo, max: hi, title: { display: true, text: "Measured period (s)", color: cc.text }, grid: { color: cc.grid }, ticks: { color: cc.text } },
-          y: { type: "linear", min: lo, max: hi, title: { display: true, text: "Predicted period (s)", color: cc.text }, grid: { color: cc.grid }, ticks: { color: cc.text } },
+          x: {
+            type: "linear", min: lo, max: hi,
+            title: { display: !mob, text: "Measured period (s)", color: cc.text, font: { size: fs } },
+            grid: { color: cc.grid },
+            ticks: { color: cc.text, font: { size: fs }, maxTicksLimit: mob ? 5 : 8 },
+          },
+          y: {
+            type: "linear", min: lo, max: hi,
+            title: { display: !mob, text: "Predicted period (s)", color: cc.text, font: { size: fs } },
+            grid: { color: cc.grid },
+            ticks: { color: cc.text, font: { size: fs }, maxTicksLimit: mob ? 5 : 8 },
+          },
         },
       },
     });
