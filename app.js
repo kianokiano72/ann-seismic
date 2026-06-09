@@ -451,16 +451,19 @@
     });
   }
 
-  const BTN_OFF = "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-white/5 text-white/60 border border-white/10";
-  const BTN_ON  = "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-cyan/20 text-cyan-soft border border-cyan/30";
+  const BTN_OFF    = "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-white/5 text-white/60 border border-white/10";
+  const BTN_ON     = "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-cyan/20 text-cyan-soft border border-cyan/30";
+  const BTN_ON_TY  = "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30";
+  function dimBtnOn(dim) { return dim === 0 ? BTN_ON : BTN_ON_TY; }
+
   function bindScatterToggle() {
     const dimWrap   = document.getElementById("scatterToggle");
     const splitWrap = document.getElementById("scatterSplit");
     dimWrap.querySelectorAll("button").forEach((b) => {
       b.addEventListener("click", () => {
         dimWrap.querySelectorAll("button").forEach((x) => (x.className = BTN_OFF));
-        b.className = BTN_ON;
         scatterState.dim = parseInt(b.dataset.t, 10);
+        b.className = dimBtnOn(scatterState.dim);
         drawScatter(scatterState.dim, scatterState.split);
       });
     });
@@ -634,7 +637,7 @@
     buildInputs();
     // NOTE: no update() on load — outputs show "—" until user clicks Calculate
     barChart();
-    drawScatter(0, "test");
+    drawScatter(scatterState.dim, scatterState.split);
     bindScatterToggle();
     buildTable();
     buildQR();
