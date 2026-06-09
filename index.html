@@ -198,6 +198,15 @@
     .animate-floaty, .animate-pulseLine { animation: none; }
     html { scroll-behavior: auto; }
   }
+
+  /* Landscape on small phones */
+  @media (max-height: 500px) and (orientation: landscape) {
+    #hero { min-height: auto !important; padding-top: 5.5rem; padding-bottom: 2rem; }
+    #hero h1 { font-size: clamp(1.1rem, 4.5vh, 2rem) !important; }
+    #hero p  { font-size: 0.8rem !important; margin-top: 0.75rem; }
+    #hero .mt-9 { margin-top: 1rem; }
+    #hero .mt-14 { margin-top: 1.5rem; }
+  }
 </style>
 </head>
 <body class="font-sans antialiased selection:text-white overflow-x-hidden">
@@ -259,7 +268,7 @@
 </header>
 
 <!-- ░░ HERO ░░ -->
-<section id="hero" class="relative min-h-screen flex items-center grid-bg overflow-hidden pt-28 pb-16">
+<section id="hero" class="relative min-h-[100svh] flex items-center grid-bg overflow-hidden pt-20 sm:pt-28 pb-10 sm:pb-16">
   <div class="glow-orb w-[420px] h-[420px] bg-cyan/40 -top-20 -left-10"></div>
   <div class="glow-orb w-[480px] h-[480px] bg-violet/40 top-40 right-0"></div>
   <div class="absolute inset-0 bg-gradient-to-b from-transparent via-ink/40 to-ink dark-veil"></div>
@@ -270,8 +279,8 @@
       Master 2 — Génie Civil · UAMOB · 2025/2026
     </div>
 
-    <h1 class="font-display font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] max-w-4xl">
-      <span class="whitespace-nowrap">Estimating the <span class="gradient-text">fundamental</span></span><br/><span class="gradient-text">period</span> of RC buildings with a neural network
+    <h1 class="font-display font-bold tracking-tight leading-[1.08] max-w-4xl" style="font-size:clamp(1.75rem,6vw,6rem)">
+      Estimating the <span class="gradient-text">fundamental</span><br/><span class="gradient-text">period</span> of RC buildings with a neural network
     </h1>
 
     <p class="mt-6 max-w-2xl text-base sm:text-lg text-white/65 leading-relaxed">
